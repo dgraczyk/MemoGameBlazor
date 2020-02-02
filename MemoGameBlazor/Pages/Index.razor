@@ -1,0 +1,74 @@
+﻿@page "/"
+
+@switch (gameMode)
+{
+    case GameModes.None:
+        <div class="text-center">
+            <button class="btn btn-primary" @onclick="@(() => SelectGameMode(GameModes.SinglePlayer))">Single Player</button>
+            <button class="btn btn-primary" @onclick="@(() => SelectGameMode(GameModes.PlayerVsPlayer))">Player vs Player</button>
+        </div>
+        break;
+    case GameModes.SinglePlayer:
+        if (this.gameState == GameStates.Started)
+        {
+            <GameBoardComponent GameMode="GameModes.SinglePlayer" Players="new[] { playerOne }" OnNewGame="this.OnNewGame" />
+        }
+        else
+        {
+            <div class="text-center">
+                <span>
+                    <label>Player Name:</label>
+                    <input @bind-value="playerOne.Name" />
+                </span>
+                <button class="btn btn-primary" @onclick="@StartGame">Start Game</button>
+            </div>
+        }
+        break;
+    case GameModes.PlayerVsPlayer:
+        if (this.gameState == GameStates.Started)
+        {
+            <GameBoardComponent GameMode="GameModes.PlayerVsPlayer" Players="new[] { playerOne, playerTwo }" OnNewGame="this.OnNewGame" />
+        }
+        else
+        {
+            <div class="text-center">
+                <span>
+                    <label>PlayerOne Name:</label>
+                    <input @bind-value="playerOne.Name" />
+                </span>
+                <span>
+                    <label>PlayerTwo Name:</label>
+                    <input @bind-value="playerTwo.Name" />
+                </span>
+                <button class="btn btn-primary" @onclick="@StartGame">Start Game</button>
+            </div>
+        }
+
+        break;
+}
+
+@code
+{
+    private PlayerViewModel playerOne = new PlayerViewModel("PlayerOne");
+    private PlayerViewModel playerTwo = new PlayerViewModel("PlayerTwo");
+
+    GameBoardComponent gameBoardComponent;
+
+    private GameModes gameMode;
+    private GameStates gameState;
+
+    private void SelectGameMode(GameModes mode)
+    {
+        this.gameMode = mode;
+    }
+
+    private void StartGame()
+    {
+        this.gameState = GameStates.Started;
+    }
+
+    private void OnNewGame()
+    {
+        this.SelectGameMode(GameModes.None);
+    }
+}

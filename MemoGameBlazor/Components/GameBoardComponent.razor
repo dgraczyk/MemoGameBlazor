@@ -1,0 +1,249 @@
+﻿@if (gameState == GameStates.Started)
+{
+    if (this.GameMode == GameModes.PlayerVsPlayer)
+    {
+        <h1>@string.Format("{0}'s turn", this.currentPlayer.Name)</h1>
+    }
+
+    <h4 class="text-center">Time: @this.gameTime</h4>
+    <div class="game-board">
+        @foreach (var card in this.gameCards)
+        {
+            @if (card.IsMatched)
+            {
+                <div class="game-card-matched" />
+            }
+            else if (card.IsOpen)
+            {
+                <div class="game-card-open">
+                    <img src="@card.Image" class="card-img-top" />
+                    <div class="card-body">
+                        <p class="card-text">@card.Text</p>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="game-card" @onclick="@(() => this.SelectCard(card))" />
+            }
+        }
+    </div>
+}
+else if (this.gameState == GameStates.Ended)
+{
+<div class="text-center">
+    <div>
+        @if (this.GameMode == GameModes.SinglePlayer)
+        {
+            <h1>@string.Format("{0}, you win!", this.currentPlayer.Name)</h1>
+            <h6>Your result: @string.Format("Moves: {0}, Time: {1}", this.currentPlayer.Moves, this.gameTime)</h6>
+            <img src="/images/cup.jpg" />
+        }
+        else
+        {
+            var results = this.Players.OrderByDescending(x => x.MatchedPairs);
+            var winner = results.First();
+
+            <h1>@winner.Name win!</h1>
+            <img src="/images/cup.jpg" />
+
+            <h6>Game time: @this.gameTime</h6>
+            foreach (var player in results)
+            {
+                <h6>@string.Format("{0} matched {1} pairs", @player.Name, player.MatchedPairs)</h6>
+            }
+        }
+    </div>
+
+    <div>
+        <button class="btn btn-primary" @onclick="@RestartGame">Restart Game</button>
+    </div>
+    <div>
+        <button class="btn btn-primary mt-2" @onclick="@NewGame">New Game</button>
+    </div>
+</div>
+}
+
+
+@code {
+
+    [Inject]
+    HttpClient httpClient { get; set; }
+
+    [Parameter]
+    public PlayerViewModel[] Players { get; set; }
+
+    [Parameter]
+    public GameModes GameMode { get; set; }
+
+    [Parameter]
+    public EventCallback OnNewGame { get; set; }
+
+    private TimeSpan gameTime;
+    private Timer timer = new Timer(1000);
+
+    private List<GameCardViewModel> gameCards;
+    private List<Card> cards;
+
+    private GameCardViewModel firstSelectedCard;
+    private GameCardViewModel secondSelectedCard;
+
+    private PlayerViewModel currentPlayer
+    {
+        get
+        {
+            return this.Players[this.currentPlayerIndex];
+        }
+    }
+
+    private int currentPlayerIndex;
+
+    private int pairs = 0;
+
+    private GameStates gameState;
+
+    protected override async Task OnInitializedAsync()
+    {
+        this.cards = await this.httpClient.GetJsonAsync<List<Card>>("sample-data/cards.json");
+        this.StartGame();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+
+        if (firstRender)
+        {
+            timer.Start();
+        }
+    }
+
+    private void StartGame()
+    {
+        this.pairs = cards.Count;
+
+        this.CreateGameCards();
+
+        this.SetWhichPlayerStartsGame();
+
+        this.timer.Elapsed += this.OnTimerElapsed;
+        this.timer.AutoReset = true;
+
+        this.gameState = GameStates.Started;
+    }
+
+    private void CreateGameCards()
+    {
+        this.gameCards = new List<GameCardViewModel>();
+
+        // make pairs
+        foreach (var card in cards)
+        {
+            gameCards.Add(new GameCardViewModel(card));
+            gameCards.Add(new GameCardViewModel(card));
+        }
+
+        //shuffle cards
+        this.gameCards = gameCards.OrderBy(x => new Random().Next()).ToList();
+    }
+
+    private void SetWhichPlayerStartsGame()
+    {
+        this.currentPlayerIndex = new Random().Next(0, this.Players.Length);
+    }
+
+    private void RestartGame()
+    {
+        this.ClearPlayersResults();
+        this.StartGame();
+    }
+
+    private void NewGame()
+    {
+        this.ClearPlayersResults();
+        this.OnNewGame.InvokeAsync(null);
+    }
+
+    private void ClearPlayersResults()
+    {
+        foreach (var player in this.Players)
+        {
+            player.Moves = 0;
+            player.MatchedPairs = 0;
+        }
+    }
+
+    public void SelectCard(GameCardViewModel card)
+    {
+        if (card.IsOpen || card.IsMatched)
+        {
+            return;
+        }
+
+        card.IsOpen = true;
+
+        if (this.firstSelectedCard != null && this.secondSelectedCard != null)
+        {
+            this.firstSelectedCard.IsOpen = this.secondSelectedCard.IsOpen = false;
+            this.firstSelectedCard = this.secondSelectedCard = null;
+        }
+
+        if (this.firstSelectedCard == null)
+        {
+            this.firstSelectedCard = card;
+            return;
+        }
+        else if (this.secondSelectedCard == null)
+        {
+            this.secondSelectedCard = card;
+        }
+
+        this.currentPlayer.Moves++;
+
+        if (this.firstSelectedCard.Equals(this.secondSelectedCard))
+        {
+            this.currentPlayer.MatchedPairs++;
+
+            this.firstSelectedCard.IsMatched = this.secondSelectedCard.IsMatched = true;
+
+            if (this.IsGameOver())
+            {
+                this.GameOver();
+            }
+        }
+        else
+        {
+            this.ChangePlayerIfNeeded();
+        }
+    }
+
+    private void GameOver()
+    {
+        this.timer.Stop();
+        this.gameState = GameStates.Ended;
+    }
+
+    private bool IsGameOver()
+    {
+        return --this.pairs == 0;
+    }
+
+    private void ChangePlayerIfNeeded()
+    {
+        if (this.GameMode == GameModes.PlayerVsPlayer)
+        {
+            this.currentPlayerIndex++;
+
+            if (this.currentPlayerIndex == this.Players.Length)
+            {
+                this.currentPlayerIndex = 0;
+            }
+        }
+    }
+
+    private void OnTimerElapsed(Object source, ElapsedEventArgs e)
+    {
+        this.gameTime = TimeSpan.FromMilliseconds(this.gameTime.TotalMilliseconds + 1000);
+        this.StateHasChanged();
+    }
+}

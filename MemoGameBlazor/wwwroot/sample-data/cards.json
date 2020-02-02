@@ -1,0 +1,82 @@
+﻿[
+  {
+    "text": "die Katze",
+    "image": "images/cat.png"
+  },
+  {
+    "text": "die Kuh",
+    "image": "images/cow.png"
+  },
+  {
+    "text": "der Hund",
+    "image": "images/dog.png"
+  },
+  {
+    "text": "der Esel",
+    "image": "images/donkey.png"
+  },
+  {
+    "text": "der Elefant",
+    "image": "images/elephant.png"
+  },
+  {
+    "text": "der Fuchs",
+    "image": "images/fox.png"
+  },
+  {
+    "text": "die Henne",
+    "image": "images/hen.png"
+  },
+  {
+    "text": "der Affe",
+    "image": "images/monkey.png"
+  },
+  {
+    "text": "die Eule",
+    "image": "images/owl.png"
+  },
+  {
+    "text": "der Panda",
+    "image": "images/panda.png"
+  },
+  {
+    "text": "der Pinguin",
+    "image": "images/penguin.png"
+  },
+  {
+    "text": "der Schwein",
+    "image": "images/pig.png"
+  },
+  {
+    "text": "das Kaninchen",
+    "image": "images/rabbit.png"
+  },
+  {
+    "text": "der Rentier",
+    "image": "images/reindeer.png"
+  },
+  {
+    "text": "der Hahn",
+    "image": "images/roster.png"
+  },
+  {
+    "text": "das Schaf",
+    "image": "images/sheep.png"
+  },
+  {
+    "text": "der Tiger",
+    "image": "images/tiger.png"
+  },
+  {
+    "text": "das Zebra",
+    "image": "images/zebra.png"
+  },
+  {
+    "text": "der Gepard",
+    "image": "images/cheetah.png"
+  },
+  {
+    "text": "die Panther",
+    "image": "images/panther.png"
+  }
+]
