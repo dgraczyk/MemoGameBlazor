@@ -1,4 +1,25 @@
-﻿@if (gameState == GameStates.Started)
+﻿@implements IDisposable
+
+@if (this.GameMode == GameModes.PlayerVsPlayer)
+{
+    <!--On player changed-->
+    <div class="modal fade" id="modalConteiner" tabindex="-1" role="dialog" aria-labelledby="modalConteinerTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <h3 class="text-center">
+                        @string.Format("Now {0}'s turn.", this.currentPlayer.Name)
+                    </h3>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (gameState == GameStates.Started)
 {
     if (this.GameMode == GameModes.PlayerVsPlayer)
     {
@@ -31,37 +52,37 @@
 }
 else if (this.gameState == GameStates.Ended)
 {
-<div class="text-center">
-    <div>
-        @if (this.GameMode == GameModes.SinglePlayer)
-        {
-            <h1>@string.Format("{0}, you win!", this.currentPlayer.Name)</h1>
-            <h6>Your result: @string.Format("Moves: {0}, Time: {1}", this.currentPlayer.Moves, this.gameTime)</h6>
-            <img src="/images/cup.jpg" />
-        }
-        else
-        {
-            var results = this.Players.OrderByDescending(x => x.MatchedPairs);
-            var winner = results.First();
-
-            <h1>@winner.Name win!</h1>
-            <img src="/images/cup.jpg" />
-
-            <h6>Game time: @this.gameTime</h6>
-            foreach (var player in results)
+    <div class="text-center">
+        <div>
+            @if (this.GameMode == GameModes.SinglePlayer)
             {
-                <h6>@string.Format("{0} matched {1} pairs", @player.Name, player.MatchedPairs)</h6>
+                <h1>@string.Format("{0}, you win!", this.currentPlayer.Name)</h1>
+                <h6>Your result: @string.Format("Moves: {0}, Time: {1}", this.currentPlayer.Moves, this.gameTime)</h6>
+                <img src="/images/cup.jpg" />
             }
-        }
-    </div>
+            else
+            {
+                var results = this.Players.OrderByDescending(x => x.MatchedPairs);
+                var winner = results.First();
 
-    <div>
-        <button class="btn btn-primary" @onclick="@RestartGame">Restart Game</button>
+                <h1>@winner.Name win!</h1>
+                <img src="/images/cup.jpg" />
+
+                <h6>Game time: @this.gameTime</h6>
+                foreach (var player in results)
+                {
+                    <h6>@string.Format("{0} matched {1} pairs", @player.Name, player.MatchedPairs)</h6>
+                }
+            }
+        </div>
+
+        <div>
+            <button class="btn btn-primary" @onclick="@RestartGame">Restart Game</button>
+        </div>
+        <div>
+            <button class="btn btn-primary mt-2" @onclick="@NewGame">New Game</button>
+        </div>
     </div>
-    <div>
-        <button class="btn btn-primary mt-2" @onclick="@NewGame">New Game</button>
-    </div>
-</div>
 }
 
 
@@ -69,6 +90,9 @@ else if (this.gameState == GameStates.Ended)
 
     [Inject]
     HttpClient httpClient { get; set; }
+
+    [Inject]
+    private IJSRuntime JSRuntime { get; set; }
 
     [Parameter]
     public PlayerViewModel[] Players { get; set; }
@@ -106,20 +130,17 @@ else if (this.gameState == GameStates.Ended)
     {
         this.cards = await this.httpClient.GetJsonAsync<List<Card>>("sample-data/cards.json");
         this.StartGame();
-    }
+    }  
 
-    protected override void OnAfterRender(bool firstRender)
+    public void Dispose()
     {
-        base.OnAfterRender(firstRender);
-
-        if (firstRender)
-        {
-            timer.Start();
-        }
+        this.timer.Elapsed -= this.OnTimerElapsed;
     }
 
     private void StartGame()
     {
+        this.gameTime = default(TimeSpan);
+
         this.pairs = cards.Count;
 
         this.CreateGameCards();
@@ -130,6 +151,13 @@ else if (this.gameState == GameStates.Ended)
         this.timer.AutoReset = true;
 
         this.gameState = GameStates.Started;
+
+        timer.Start();
+
+        if (this.GameMode == GameModes.PlayerVsPlayer)
+        {
+            this.ShowPlayerChangedModal();
+        }
     }
 
     private void CreateGameCards()
@@ -220,6 +248,7 @@ else if (this.gameState == GameStates.Ended)
     private void GameOver()
     {
         this.timer.Stop();
+        this.timer.Elapsed -= this.OnTimerElapsed;
         this.gameState = GameStates.Ended;
     }
 
@@ -238,7 +267,14 @@ else if (this.gameState == GameStates.Ended)
             {
                 this.currentPlayerIndex = 0;
             }
+
+            this.ShowPlayerChangedModal();
         }
+    }
+
+    private async void ShowPlayerChangedModal()
+    {
+        await this.JSRuntime.InvokeVoidAsync("showModal");
     }
 
     private void OnTimerElapsed(Object source, ElapsedEventArgs e)
