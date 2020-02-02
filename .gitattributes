@@ -3,3 +3,4 @@
 *    text=auto
 
 *.cs text diff=csharp
+*.razor linguist-language=csharp
